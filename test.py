@@ -17,10 +17,11 @@ from torchvision import datasets
 
 def get_loader_by_id(id_):
     transformation = transforms.Compose([
+        transforms.Resize((32, 32)),
         transforms.ToTensor(),
     ])
     cifar_dataset = datasets.CIFAR100('/var/tmp/data', train=True,
-                                  transform=transforms.ToTensor(),
+                                  transform=transformation,
                                   download=True)
 
     idx = torch.tensor(cifar_dataset.targets) == id_
@@ -34,7 +35,7 @@ def get_loader_by_id(id_):
 def test_transform(size, crop):
     transform_list = []
     if size != 0:
-        transform_list.append(transforms.Resize(size))
+        transform_list.append(transforms.Resize((size, size)))
     if crop:
         transform_list.append(transforms.CenterCrop(size))
     transform_list.append(transforms.ToTensor())
