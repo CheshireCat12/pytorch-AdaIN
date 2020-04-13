@@ -149,7 +149,7 @@ for content, _ in cifar100_dloader:
             output = style_transfer(vgg, decoder, content, style, args.alpha)
         output = output.cpu()
 
-        output_name = output / f'test.jpg'
+        output_name = output_dir / f'test.jpg'
         save_image(output, str(output_name))
     break
 
