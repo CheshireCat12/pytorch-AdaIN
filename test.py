@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -13,11 +14,20 @@ from function import adaptive_instance_normalization, coral
 from torch.utils.data.dataloader import DataLoader
 from torchvision import datasets
 
-cifar100_dset = datasets.CIFAR100('/var/tmp/data', train=True,
+
+def get_loader_by_id(id_):
+    transformation = transforms.Compose([
+        transforms.ToTensor(),
+    ])
+    cifar_dataset = datasets.CIFAR100('/var/tmp/data', train=True,
                                   transform=transforms.ToTensor(),
                                   download=True)
 
-cifar100_dloader = DataLoader(cifar100_dset, batch_size=1)
+    idx = torch.tensor(cifar_dataset.targets) == id_
+    dset_train = torch.utils.data.dataset.Subset(cifar_dataset, np.where(idx==1)[0])
+    cifar_loader = torch.utils.data.DataLoader(dset_train, batch_size=1, shuffle=False)
+
+    return cifar_loader
 
 
 
@@ -78,6 +88,8 @@ parser.add_argument('--save_ext', default='.jpg',
                     help='The extension name of the output image')
 parser.add_argument('--output', type=str, default='output',
                     help='Directory to save the output image(s)')
+parser.add_argument('--class', type=int, default=1,
+                    help='choose the class to apply the style')
 
 # Advanced options
 parser.add_argument('--preserve_color', action='store_true',
@@ -105,6 +117,8 @@ if args.content:
 else:
     content_dir = Path(args.content_dir)
     content_paths = [f for f in content_dir.glob('*')]
+
+cifar100_dloader = get_loader_by_id()
 
 # Either --style or --styleDir should be given.
 assert (args.style or args.style_dir)
@@ -138,6 +152,8 @@ decoder.to(device)
 content_tf = test_transform(args.content_size, args.crop)
 style_tf = test_transform(args.style_size, args.crop)
 
+counter = 0
+
 for content, _ in cifar100_dloader:
 
     for style_path in style_paths:
@@ -147,12 +163,19 @@ for content, _ in cifar100_dloader:
         content = content.to(device)
         with torch.no_grad():
             output = style_transfer(vgg, decoder, content, style, args.alpha)
+        style = style.cpu()
+        content = content.cpu()
         output = output.cpu()
 
-        output_name = output_dir / f'test.jpg'
-        save_image(output, str(output_name))
-    break
+        final_output = torch.cat((style, output, content), dim=0)
 
+
+        output_name = output_dir / f'{args.class}-stylezed-{counter}.jpg'
+        save_image(final_output, str(output_name))
+
+    if counter >= 8:
+        break
+    counter += 1
 # for content_path in content_paths:
 #     if do_interpolation:  # one content image, N style image
 #         style = torch.stack([style_tf(Image.open(str(p))) for p in style_paths])
