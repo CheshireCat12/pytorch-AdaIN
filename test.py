@@ -10,6 +10,16 @@ from torchvision.utils import save_image
 import net
 from function import adaptive_instance_normalization, coral
 
+from torch.utils.data.dataloader import DataLoader
+from torchvision import datasets
+
+cifar100_dset = datasets.CIFAR100('/var/tmp/data', train=True,
+                                  transform=transforms.ToTensor(),
+                                  download=True)
+
+cifar100_dloader = DataLoader(cifar100_dset, batch_size=1)
+
+
 
 def test_transform(size, crop):
     transform_list = []
@@ -128,34 +138,49 @@ decoder.to(device)
 content_tf = test_transform(args.content_size, args.crop)
 style_tf = test_transform(args.style_size, args.crop)
 
-for content_path in content_paths:
-    if do_interpolation:  # one content image, N style image
-        style = torch.stack([style_tf(Image.open(str(p))) for p in style_paths])
-        content = content_tf(Image.open(str(content_path))) \
-            .unsqueeze(0).expand_as(style)
-        style = style.to(device)
+for content, _ in cifar100_dloader:
+
+    for style_path in style_paths:
+        style = style_tf(Image.open(str(style_path)))
+
+        style = style.to(device).unsqueeze(0)
         content = content.to(device)
         with torch.no_grad():
-            output = style_transfer(vgg, decoder, content, style,
-                                    args.alpha, interpolation_weights)
+            output = style_transfer(vgg, decoder, content, style, args.alpha)
         output = output.cpu()
-        output_name = output_dir / '{:s}_interpolation{:s}'.format(
-            content_path.stem, args.save_ext)
+
+        output_name = output / f'test.jpg'
         save_image(output, str(output_name))
+    break
 
-    else:  # process one content and one style
-        for style_path in style_paths:
-            content = content_tf(Image.open(str(content_path)))
-            style = style_tf(Image.open(str(style_path)))
-            if args.preserve_color:
-                style = coral(style, content)
-            style = style.to(device).unsqueeze(0)
-            content = content.to(device).unsqueeze(0)
-            with torch.no_grad():
-                output = style_transfer(vgg, decoder, content, style,
-                                        args.alpha)
-            output = output.cpu()
+# for content_path in content_paths:
+#     if do_interpolation:  # one content image, N style image
+#         style = torch.stack([style_tf(Image.open(str(p))) for p in style_paths])
+#         content = content_tf(Image.open(str(content_path))) \
+#             .unsqueeze(0).expand_as(style)
+#         style = style.to(device)
+#         content = content.to(device)
+#         with torch.no_grad():
+#             output = style_transfer(vgg, decoder, content, style,
+#                                     args.alpha, interpolation_weights)
+#         output = output.cpu()
+#         output_name = output_dir / '{:s}_interpolation{:s}'.format(
+#             content_path.stem, args.save_ext)
+#         save_image(output, str(output_name))
 
-            output_name = output_dir / '{:s}_stylized_{:s}{:s}'.format(
-                content_path.stem, style_path.stem, args.save_ext)
-            save_image(output, str(output_name))
+#     else:  # process one content and one style
+#         for style_path in style_paths:
+#             content = content_tf(Image.open(str(content_path)))
+#             style = style_tf(Image.open(str(style_path)))
+#             if args.preserve_color:
+#                 style = coral(style, content)
+#             style = style.to(device).unsqueeze(0)
+#             content = content.to(device).unsqueeze(0)
+#             with torch.no_grad():
+#                 output = style_transfer(vgg, decoder, content, style,
+#                                         args.alpha)
+#             output = output.cpu()
+
+#             output_name = output_dir / '{:s}_stylized_{:s}{:s}'.format(
+#                 content_path.stem, style_path.stem, args.save_ext)
+#             save_image(output, str(output_name))
