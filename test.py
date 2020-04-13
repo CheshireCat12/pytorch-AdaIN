@@ -118,7 +118,7 @@ else:
     content_dir = Path(args.content_dir)
     content_paths = [f for f in content_dir.glob('*')]
 
-cifar100_dloader = get_loader_by_id()
+cifar100_dloader = get_loader_by_id(args.class_to_transform)
 
 # Either --style or --styleDir should be given.
 assert (args.style or args.style_dir)
