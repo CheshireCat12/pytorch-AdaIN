@@ -88,7 +88,7 @@ parser.add_argument('--save_ext', default='.jpg',
                     help='The extension name of the output image')
 parser.add_argument('--output', type=str, default='output',
                     help='Directory to save the output image(s)')
-parser.add_argument('--class', type=int, default=1,
+parser.add_argument('--class_to_transform', type=int, default=1,
                     help='choose the class to apply the style')
 
 # Advanced options
@@ -170,9 +170,9 @@ for content, _ in cifar100_dloader:
         final_output = torch.cat((style, output, content), dim=0)
 
 
-        output_name = output_dir / f'{args.class}-stylezed-{counter}.jpg'
+        output_name = output_dir / f'{args.class_to_transform}-stylezed-{counter}.jpg'
         save_image(final_output, str(output_name))
-
+        print(f'Create img: {output_name}')
     if counter >= 8:
         break
     counter += 1
